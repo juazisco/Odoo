@@ -5,6 +5,7 @@ import datetime
 from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT, DEFAULT_SERVER_DATE_FORMAT
 from odoo import SUPERUSER_ID
 from dateutil import tz
+from odoo.http import request
 
 import logging
 _logger = logging.getLogger(__name__)
@@ -97,7 +98,7 @@ class WebsiteSupportTicket(models.Model):
     sla_alert_ids = fields.Many2many('website.support.sla.alert', string="SLA Alerts",
                                      help="Keep record of SLA alerts sent so we do not resend them")
 
-    @api.one
+    
     @api.depends('sla_timer')
     def _compute_sla_timer_format(self):
         # Display negative hours in a positive format
@@ -142,7 +143,7 @@ class WebsiteSupportTicket(models.Model):
                 if sla_alert not in active_sla_ticket.sla_alert_ids:
 
                     for my_user in active_sla_ticket.category_id.cat_user_ids:
-                        values = notification_template.generate_email(active_sla_ticket.id)
+                        values = notification_template.generate_email(active_sla_ticket.id,['subject','body_html','email_to', 'partner_to', 'email_cc','email_from','reply_to', 'scheduled_date'])
                         values['body_html'] = values['body_html'].replace("_user_name_",  my_user.partner_id.name)
                         values['email_to'] = my_user.partner_id.email
 
@@ -161,7 +162,6 @@ class WebsiteSupportTicket(models.Model):
     def resume_sla(self):
         self.sla_active = True
 
-    @api.one
     @api.depends('planned_time')
     def _compute_planned_time_format(self):
 
@@ -180,13 +180,15 @@ class WebsiteSupportTicket(models.Model):
         else:
             self.planned_time_format = self.planned_time
 
-    @api.one
     def _compute_approve_url(self):
         self.approve_url = "/support/approve/" + str(self.id)
 
-    @api.one
     def _compute_disapprove_url(self):
         self.disapprove_url = "/support/disapprove/" + str(self.id)
+
+    @api.onchange('category')
+    def _onchange_category(self):
+        self.sub_category_id = False
 
     @api.onchange('sub_category_id')
     def _onchange_sub_category_id(self):
@@ -258,19 +260,17 @@ class WebsiteSupportTicket(models.Model):
 
         return super(WebsiteSupportTicket, self).message_update(msg_dict, update_vals=update_vals)
 
-    @api.one
     @api.depends('state_id')
     def _compute_unattend(self):
 
         if self.state_id.unattended == True:
             self.unattended = True
 
-    @api.multi
     def request_approval(self):
 
         approval_email = self.env['ir.model.data'].get_object('website_support', 'support_ticket_approval')
 
-        values = self.env['mail.compose.message'].generate_email_for_composer(approval_email.id, [self.id])[self.id]
+        values = self.env['mail.compose.message'].generate_email_for_composer(approval_email.id, [self.id],['subject','body_html','email_to', 'partner_to', 'email_cc','email_from','reply_to', 'scheduled_date'])[self.id]
 
         request_message = values['body']
 
@@ -284,7 +284,6 @@ class WebsiteSupportTicket(models.Model):
             'target': 'new'
         }
 
-    @api.multi
     def open_close_ticket_wizard(self):
 
         return {
@@ -354,8 +353,8 @@ class WebsiteSupportTicket(models.Model):
         new_id.message_subscribe(partner_ids=partner_ids)
 
         for my_user in new_id.category_id.cat_user_ids:
-            values = notification_template.generate_email(new_id.id)
-            values['body_html'] = values['body_html'].replace("_ticket_url_", "web#id=" + str(new_id.id) + "&view_type=form&model=website.support.ticket&menu_id=" + str(support_ticket_menu.id) + "&action=" + str(support_ticket_action.id) ).replace("_user_name_",  my_user.partner_id.name)
+            values = notification_template.generate_email(new_id.id,['subject','body_html','email_to', 'partner_to', 'email_cc','email_from','reply_to', 'scheduled_date'])
+            values['body_html'] = values['body_html'].replace("_ticket_url_", request.httprequest.host_url + "web#id=" + str(new_id.id) + "&view_type=form&model=website.support.ticket&menu_id=" + str(support_ticket_menu.id) + "&action=" + str(support_ticket_action.id) ).replace("_user_name_",  my_user.partner_id.name)
             values['email_to'] = my_user.partner_id.email
 
             send_mail = self.env['mail.mail'].create(values)
@@ -366,7 +365,6 @@ class WebsiteSupportTicket(models.Model):
 
         return new_id
 
-    @api.multi
     def write(self, values, context=None):
 
         update_rec = super(WebsiteSupportTicket, self).write(values)
@@ -389,7 +387,7 @@ class WebsiteSupportTicket(models.Model):
                 #Default email template
                 email_template = self.env['ir.model.data'].get_object('website_support','support_ticket_user_change')
 
-            email_values = email_template.generate_email([self.id])[self.id]
+            email_values = email_template.generate_email([self.id],['subject','body_html','email_to', 'partner_to', 'email_cc','email_from','reply_to', 'scheduled_date'])[self.id]
             email_values['model'] = "website.support.ticket"
             email_values['res_id'] = self.id
             assigned_user = self.env['res.users'].browse( int(values['user_id']) )
@@ -404,7 +402,7 @@ class WebsiteSupportTicket(models.Model):
 
     def send_survey(self):
         notification_template = self.env['ir.model.data'].sudo().get_object('website_support', 'support_ticket_survey')
-        values = notification_template.generate_email(self.id)
+        values = notification_template.generate_email(self.id,['subject','body_html','email_to', 'partner_to', 'email_cc','email_from','reply_to', 'scheduled_date'])
         send_mail = self.env['mail.mail'].create(values)
         send_mail.send(True)
 
@@ -439,7 +437,7 @@ class WebsiteSupportTicketMessage(models.Model):
         # Notify everyone following the ticket of the custoemr reply
         if values['by'] == "customer":
             customer_reply_email_template = self.env['ir.model.data'].get_object('website_support','support_ticket_customer_reply_wrapper')
-            email_values = customer_reply_email_template.generate_email(new_record.id)
+            email_values = customer_reply_email_template.generate_email(new_record.id,['subject','body_html','email_to', 'partner_to', 'email_cc','email_from','reply_to', 'scheduled_date'])
             for follower in new_record.ticket_id.message_follower_ids:
                 email_values['email_to'] = follower.partner_id.email
                 send_mail = self.env['mail.mail'].sudo().create(email_values)
@@ -538,12 +536,17 @@ class WebsiteSupportTicketClose(models.TransientModel):
     ticket_id = fields.Many2one('website.support.ticket', string="Ticket ID")
     message = fields.Html(string="Close Message", required=True)
     template_id = fields.Many2one('mail.template', string="Mail Template", domain="[('model_id','=','website.support.ticket'), ('built_in','=',False)]")
+    attachment_ids = fields.Many2many(comodel_name='ir.attachment', string='Attachments')
 
     @api.onchange('template_id')
     def _onchange_template_id(self):
         if self.template_id:
-            values = self.env['mail.compose.message'].generate_email_for_composer(self.template_id.id, [self.ticket_id.id])[self.ticket_id.id]
-            self.message = values['body']
+            values = self.env['mail.compose.message'].generate_email_for_composer(self.template_id.id, [self.ticket_id.id],['subject','body_html','email_to', 'partner_to', 'email_cc','email_from','reply_to', 'scheduled_date'])[self.ticket_id.id]
+            #self.message = values['body']
+            self.update({
+                'message': values['body'],
+                'attachment_ids': [(6, 0, self.template_id.attachment_ids.ids)]
+            })
 
     def close_ticket(self):
 
@@ -584,14 +587,18 @@ class WebsiteSupportTicketCompose(models.Model):
     template_id = fields.Many2one('mail.template', string="Mail Template", domain="[('model_id','=','website.support.ticket'), ('built_in','=',False)]")
     approval = fields.Boolean(string="Approval")
     planned_time = fields.Datetime(string="Planned Time")
+    attachment_ids = fields.Many2many(comodel_name='ir.attachment', string='Attachments')
 
     @api.onchange('template_id')
     def _onchange_template_id(self):
         if self.template_id:
-            values = self.env['mail.compose.message'].generate_email_for_composer(self.template_id.id, [self.ticket_id.id])[self.ticket_id.id]
-            self.body = values['body']
+            values = self.env['mail.compose.message'].generate_email_for_composer(self.template_id.id, [self.ticket_id.id],['subject','body_html','email_to', 'partner_to', 'email_cc','email_from','reply_to', 'scheduled_date'])[self.ticket_id.id]
+            #self.body = values['body']
+            self.update({
+                'body': values['body'],
+                'attachment_ids': [(6, 0, self.template_id.attachment_ids.ids)]
+            })
 
-    @api.one
     def send_reply(self):
 
         #Change the approval state before we send the mail
@@ -613,9 +620,10 @@ class WebsiteSupportTicketCompose(models.Model):
         if setting_staff_reply_email_template_id:
             email_wrapper = self.env['mail.template'].browse(setting_staff_reply_email_template_id)
 
-        values = email_wrapper.generate_email([self.id])[self.id]
+        values = email_wrapper.generate_email([self.id],['subject','body_html','email_to', 'partner_to', 'email_cc','email_from','reply_to', 'scheduled_date'])[self.id]
         values['model'] = "website.support.ticket"
         values['res_id'] = self.ticket_id.id
+        values['attachment_ids'] = [(6, 0, self.attachment_ids.ids)]
         send_mail = self.env['mail.mail'].create(values)
         send_mail.send()
 
@@ -633,3 +641,15 @@ class WebsiteSupportTicketCompose(models.Model):
             #Change the ticket state to staff replied
             staff_replied = self.env['ir.model.data'].get_object('website_support','website_ticket_state_staff_replied')
             self.ticket_id.state_id = staff_replied.id
+
+class IrAttachment(models.Model):
+    _inherit = 'ir.attachment'
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        model = self.env.context.get('params', {}).get('model')
+        if model:
+            for val in vals_list:
+                if not val.get('res_model', False):
+                    val.update({'res_model': model})
+        return super(IrAttachment, self).create(vals_list)

@@ -325,7 +325,7 @@ class SupportTicketController(http.Controller):
     @http.route(['''/support/help/<model("website.support.help.group"):help_group>/<model("website.support.help.page", "[('group_id','=',help_group[0])]"):help_page>'''], type='http', auth="public", website=True)
     def help_page(self, help_group, help_page, enable_editor=None, **post):
         """Displays help page template"""
-        if help_group.website_published and help_page.website_published:
+        if help_group.website_published and help_page.website_published and (request.env.user in help_group.sudo().group_ids.users or len(help_group.group_ids) == 0):
             return http.request.render("website_support.help_page", {'help_page':help_page})
         else:
             return request.render('website.404')
@@ -414,7 +414,7 @@ class SupportTicketController(http.Controller):
                     request.env['ir.attachment'].sudo().create({
                         'name': c_file.filename,
                         'datas': base64.b64encode(data),
-                        'datas_fname': c_file.filename,
+                        #'datas_fname': c_file.filename,
                         'res_model': 'website.support.ticket',
                         'res_id': new_ticket_id.id
                     })
@@ -503,7 +503,25 @@ class SupportTicketController(http.Controller):
 
         support_ticket.state_id = request.env['ir.model.data'].sudo().get_object('website_support', 'website_ticket_state_customer_replied')
 
-        request.env['website.support.ticket'].sudo().browse(support_ticket.id).message_post(body=values['comment'], subject="Support Ticket Reply", message_type="comment")
+
+        attachments = []
+        if 'file' in values:
+
+            for c_file in request.httprequest.files.getlist('file'):
+                data = c_file.read()
+
+                if c_file.filename:
+                    new_attachment = request.env['ir.attachment'].sudo().create({
+                        'name': c_file.filename,
+                        'datas': base64.b64encode(data),
+                        #'datas_fname': c_file.filename,
+                        'res_model': 'website.support.ticket',
+                        'res_id': support_ticket.id
+                    })
+
+                    attachments.append( (c_file.filename, data) )
+
+        request.env['website.support.ticket'].sudo().browse(support_ticket.id).message_post(body=values['comment'], subject="Support Ticket Reply", message_type="comment", attachments=attachments)
 
         return werkzeug.utils.redirect("/support/portal/ticket/view/" + str(support_ticket.portal_access_key) )
 
@@ -533,14 +551,15 @@ class SupportTicketController(http.Controller):
                         new_attachment = request.env['ir.attachment'].sudo().create({
                             'name': c_file.filename,
                             'datas': base64.b64encode(data),
-                            'datas_fname': c_file.filename,
+                            #'datas_fname': c_file.filename,
                             'res_model': 'website.support.ticket',
                             'res_id': ticket.id
                         })
 
                         attachments.append( (c_file.filename, data) )
 
-            ticket.sudo(request.env.user.id).message_post(body=values['comment'], subject="Support Ticket Reply", message_type="comment", attachments=attachments)
+            message_post = ticket.sudo().message_post(body=values['comment'], subject="Support Ticket Reply", message_type="comment", attachments=attachments)
+            message_post.author_id = request.env.user.partner_id.id
         else:
             return "You do not have permission to submit this commment"
 

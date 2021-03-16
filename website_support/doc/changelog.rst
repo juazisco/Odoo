@@ -1,3 +1,24 @@
+v1.0.11
+=======
+* Fix help page 404
+* Fix portal reply 500
+
+v1.0.10
+=======
+* Fix issue with translations caused by the change of field category to category_id in version 12 to match naming conventions
+
+v1.0.9
+======
+* Prevent direct help page access
+
+v1.0.8
+======
+* Fix links in new ticket in category email
+
+v1.0.7
+======
+* Portal user reply fix
+
 v1.0.6
 ======
 * Add ability for clients to add attachments in there replies from the website interface

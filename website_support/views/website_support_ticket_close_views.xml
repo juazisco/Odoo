@@ -8,8 +8,9 @@
             <form>
                 <group>
                     <field name="ticket_id" invisible="True"/>
-                    <field name="message"/>
+                    <field name="message" widget="html"/>
                     <field name="template_id" context="{'default_model':'website.support.ticket', 'default_body_html': message}"/>
+                    <field name="attachment_ids" widget="many2many_binary" string="Attachments"/>
                 </group>
                 <footer>
                     <button string="Close Ticket" name="close_ticket" type="object" class="btn-primary"/>

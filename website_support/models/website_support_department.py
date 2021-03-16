@@ -19,7 +19,6 @@ class WebsiteSupportDepartment(models.Model):
 
     #-------------- Sub Category Stats --------------------------
 
-    @api.one
     @api.depends('manager_ids', 'partner_ids')
     def _compute_sub_category_ids(self):
 
@@ -38,7 +37,6 @@ class WebsiteSupportDepartment(models.Model):
 
         self.sub_category_ids = self.env['website.support.department.subcategory'].search([('wsd_id', '=', self.id)], limit=5)
 
-    @api.one
     @api.depends('manager_ids', 'partner_ids')
     def _compute_sub_category_month_ids(self):
 
@@ -58,7 +56,6 @@ class WebsiteSupportDepartment(models.Model):
 
         self.sub_category_month_ids = self.env['website.support.department.subcategory'].search([('wsd_month_id', '=', self.id)], limit=5)
 
-    @api.one
     @api.depends('manager_ids', 'partner_ids')
     def _compute_sub_category_week_ids(self):
 
@@ -80,7 +77,6 @@ class WebsiteSupportDepartment(models.Model):
 
     #-------------- Ticket Submit Stats --------------------------
 
-    @api.one
     @api.depends('manager_ids', 'partner_ids')
     def _compute_submit_ticket_contact_ids(self):
 
@@ -95,7 +91,6 @@ class WebsiteSupportDepartment(models.Model):
 
         self.submit_ticket_contact_ids = self.env['website.support.department.submit'].search([('wsd_id', '=', self.id)], limit=5)
 
-    @api.one
     @api.depends('manager_ids', 'partner_ids')
     def _compute_submit_ticket_contact_month_ids(self):
 
@@ -112,7 +107,6 @@ class WebsiteSupportDepartment(models.Model):
 
         self.submit_ticket_contact_month_ids = self.env['website.support.department.submit'].search([('wsd_month_id', '=', self.id)], limit=5)
 
-    @api.one
     @api.depends('manager_ids', 'partner_ids')
     def _compute_submit_ticket_contact_week_ids(self):
 

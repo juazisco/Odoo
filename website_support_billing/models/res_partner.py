@@ -9,7 +9,6 @@ class ResPartnerSupportBilling(models.Model):
 
     _inherit = "res.partner"
 
-    @api.multi
     def support_billing_action(self):
         self.ensure_one()
 
@@ -32,11 +31,10 @@ class ResPartnerSupportBillingWizard(models.Model):
     end_date = fields.Date(string="End Date", required="True")
     per_hour_charge = fields.Float(string="Per Hour Charge")
 
-    @api.multi
     def generate_invoice(self):
         self.ensure_one()
 
-        new_invoice = self.env['account.invoice'].create({
+        new_invoice = self.env['account.move'].create({
             'partner_id': self.partner_id.id,
             'account_id': self.partner_id.property_account_receivable_id.id,
             'fiscal_position_id': self.partner_id.property_account_position_id.id,
@@ -59,7 +57,7 @@ class ResPartnerSupportBillingWizard(models.Model):
             'name': 'Support Billing Invoice',
             'view_type': 'form',
             'view_mode': 'form',
-            'res_model': 'account.invoice',
+            'res_model': 'account.move',
             'type': 'ir.actions.act_window',
             'res_id': new_invoice.id
         }

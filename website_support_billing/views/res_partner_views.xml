@@ -22,7 +22,6 @@
           <field name="name">Generate Timesheet Invoice</field>
           <field name="model_id" ref="base.model_res_partner"/>
           <field name="binding_model_id" ref="base.model_res_partner"/>
-          <field name="condition">True</field>
           <field name="state">code</field>
           <field name="code">action = record.support_billing_action()</field>
       </record>

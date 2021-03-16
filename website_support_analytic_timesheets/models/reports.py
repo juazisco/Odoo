@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import time
-from openerp import api, models, _
+from odoo import api, models
 
 import logging
 _logger = logging.getLogger(__name__)
@@ -9,7 +9,6 @@ class ReportWebsetAupportAnalyticTimesheetsSupportTechReport(models.Model):
 
     _name = "report.website_support_analytic_timesheets.strt"
 
-    @api.multi
     def get_report_values(self, docids, data=None):
         docs = self.env['account.analytic.line'].browse(docids)
 

@@ -18,6 +18,7 @@
                               <field name="employee_id" invisible="True"/>
                               <field name="name"/>
                               <field name="account_id" invisible="True"/>
+                              <field name="company_id" invisible="True"/>                              
                               <field name="project_id"/>
                               <field name="task_id" context="{'default_project_id': project_id}" domain="[('project_id', '=', project_id)]"/>
                               <field name="unit_amount" string="Duration" sum="Total time" widget="float_time"/>
